@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const puppeteer = require('puppeteer');
 const login = require('./functions');
+const clientSelector = require('./PDX/clientSelector');
 
 const _selectors = {
   PDX: {
@@ -9,6 +10,24 @@ const _selectors = {
       email: 'input[type=email]',
       password: 'input[type=password]',
       loginBtn: 'lp-processing-button',
+    },
+    selectors: {
+      activeClient: 'mat-radio-button.active',
+      allClients: {
+        parent: '.cdk-global-overlay-wrapper',
+        child: '.mat-radio-label-content',
+      },
+      switchAccount: {
+        parent: '.mat-button-wrapper',
+        child: '.mat-button-wrapper',
+      },
+      activeChannel: {
+        parent: '.channels-list',
+        child:
+          '.channels-list > lp-dashboard-main-channel-list-item > div > img',
+      },
+      selectClient: (clientId) =>
+        `#mat-radio-${clientId + 2} > label > .mat-radio-container`,
     },
     clientsSelector: {
       changeClientIcon:
@@ -25,6 +44,7 @@ const getChannels = (link) =>
 
 (async () => {
   const browser = await puppeteer.launch({
+    devtools: true,
     headless: false,
     slowMo: 10,
     args: [
@@ -32,6 +52,7 @@ const getChannels = (link) =>
     ],
   });
   const page = await browser.newPage();
+  const chosenClient = 'American Buyers Group';
   const {
     clientsSelector: { changeClientIcon, changeAccount },
   } = _selectors.PDX;
@@ -41,77 +62,78 @@ const getChannels = (link) =>
   );
 
   // PDX Login
-  login(page, _selectors.PDX.login, {
+  await login(page, _selectors.PDX.login, {
     email: process.env.PDX_EMAIL,
     password: process.env.PDX_PASSWORD,
   });
 
   // Selecting client
-  const chosenClient = 'American Buyers Group';
+  clientSelector(chosenClient, page);
+  page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
 
-  // 1. Click the first icon to change client
-  await page.waitForSelector('.action-group');
-  await page.$$eval(changeClientIcon, (group) => group[0].click());
+  await page.evaluate(() => console.log(`url is ${location.href}`));
 
-  // 2. Click "change account"
-  await page.waitForSelector('.cdk-overlay-container');
-  await page.$$eval(changeAccount, (group) => group[0].click());
+  // // 1. Click the first icon to change client
+  // await page.waitForSelector('.action-group');
+  // await page.$$eval(changeClientIcon, (group) => group[0].click());
 
-  // 3. Get list of clients
-  await page.waitForSelector('.cdk-global-overlay-wrapper');
-  const clients = await page.evaluate(() =>
-    Array.from(document.querySelectorAll('.mat-radio-label-content')).map(
-      (client) => client.innerText
-    )
-  );
-  const activeClient = await page.$eval(
-    'mat-radio-button.active',
-    (selectedClient) => selectedClient.innerText
-  );
+  // // 2. Click "change account"
+  // await page.waitForSelector('.cdk-overlay-container');
+  // await page.$$eval(changeAccount, (group) => group[0].click());
 
-  if (activeClient !== chosenClient) {
-    if (clients.includes(chosenClient)) {
-      // 4. Select client
-      const clientId = clients.indexOf(chosenClient);
-      await page.$$eval(
-        `#mat-radio-${clientId + 2} > label > .mat-radio-container`,
-        (group) => group[0].click()
-      );
-    }
+  // // 3. Get list of clients
+  // await page.waitForSelector('.cdk-global-overlay-wrapper');
+  // const clients = await page.evaluate(() =>
+  //   Array.from(document.querySelectorAll('.mat-radio-label-content')).map(
+  //     (client) => client.innerText
+  //   )
+  // );
+  // const activeClient = await page.$eval(
+  //   'mat-radio-button.active',
+  //   (selectedClient) => selectedClient.innerText
+  // );
 
-    // 5. Click switch account button
-    await page.waitForSelector('.mat-button-wrapper');
-    await page.$$eval('.mat-dialog-actions > button', (group) =>
-      group[1].click()
-    );
+  // if (activeClient !== chosenClient) {
+  //   if (clients.includes(chosenClient)) {
+  //     // 4. Select client
+  //     const clientId = clients.indexOf(chosenClient);
+  //     await page.$$eval(
+  //       `#mat-radio-${clientId + 2} > label > .mat-radio-container`,
+  //       (group) => group[0].click()
+  //     );
+  //   }
 
-    // 6. Select active channel
-    await page.waitForTimeout(1000);
-    await page.waitForSelector('.channels-list');
-    const links = await page.$$eval(
-      '.channels-list > lp-dashboard-main-channel-list-item > div > img',
-      (groups) =>
-        groups.map((group) =>
-          group.src.substring(group.src.lastIndexOf('/') + 1)
-        )
-    );
-    console.log(links);
-  } else {
-    // 5. Click switch account button
-    await page.waitForSelector('.mat-button-wrapper');
-    await page.$$eval('.mat-dialog-actions > button', (group) =>
-      group[0].click()
-    );
+  //   // 5. Click switch account button
+  //   await page.waitForSelector('.mat-button-wrapper');
+  //   await page.$$eval('.mat-button-wrapper', (group) => group[1].click());
 
-    // 6. Select active channel
-    await page.waitForTimeout(1000);
-    await page.waitForSelector('.channels-list');
-    const links = await page.$$eval(
-      '.channels-list > lp-dashboard-main-channel-list-item > div > img',
-      (groups) => groups.map((group) => getChannels(group.src))
-    );
-    console.log(links);
-  }
+  //   // 6. Select active channel
+  //   await page.waitForTimeout(1000);
+  //   await page.waitForSelector('.channels-list');
+  //   const links = await page.$$eval(
+  //     '.channels-list > lp-dashboard-main-channel-list-item > div > img',
+  //     (groups) =>
+  //       groups.map((group) =>
+  //         group.src.substring(group.src.lastIndexOf('/') + 1)
+  //       )
+  //   );
+  //   console.log(links);
+  // } else {
+  //   // 5. Click switch account button
+  //   await page.waitForSelector('.mat-button-wrapper');
+  //   await page.$$eval('.mat-dialog-actions > button', (group) =>
+  //     group[0].click()
+  //   );
+
+  //   // 6. Select active channel
+  //   await page.waitForTimeout(1000);
+  //   await page.waitForSelector('.channels-list');
+  //   const links = await page.$$eval(
+  //     '.channels-list > lp-dashboard-main-channel-list-item > div > img',
+  //     (groups) => groups.map((group) => getChannels(group.src))
+  //   );
+  //   console.log(links);
+  // }
 
   //   await browser.close();
 })();
