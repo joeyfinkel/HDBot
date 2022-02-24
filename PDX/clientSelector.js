@@ -1,70 +1,85 @@
 const puppeteer = require('puppeteer');
-const selectors = require('./selectors');
+const { clientSelectors } = require('./selectors');
+const { click } = require('../helpers');
+const { getChannels, clickOnChannel } = require('./channelSelector');
 
-const click = async (page, { parent, child }, btnIdx) => {
-  console.log(parent, child);
-  await page.waitForSelector(parent);
-  await page.$$eval(child, (group) => group[btnIdx].click());
-};
+/**
+ *
+ * @param {puppeteer.Page} page The page.
+ * @param {{parent: string, child: string}} selector The HTML selectors.
+ * @returns {Promise<string[]>} List of all clients.
+ */
+const getClients = async (page, selector) => {
+  await page.waitForSelector(selector.parent);
 
-const allClients = async (page, { parent, child }) => {
-  await page.waitForSelector(parent);
-  return await page.evaluate(() =>
-    Array.from(document.querySelectorAll(child)).map(
-      (client) => client.innerText
-    )
-  );
-};
-
-const activeClient = async (page, selector) => {
-  await page.waitForSelector(selector);
-  return page.$eval(selector, (selectedClient) => selectedClient.innerText);
-};
-
-const selectClient = async (page, chosenClient, selector) => {
-  const clientId = clients.indexOf(chosenClient);
-  await page.$$eval(selector.client(clientId), (group) => group[0].click());
-};
-
-const selectActiveChannel = async (page, { parent, child }) => {
-  await page.waitForTimeout(1000);
-  await page.waitForSelector(parent);
-  return await page.$$eval(child, (groups) =>
-    groups.map((group) => group.src.substring(group.src.lastIndexOf('/') + 1))
+  return page.evaluate(
+    (_selector) =>
+      Array.from(document.querySelectorAll(_selector.child)).map(
+        (client) => client.innerText
+      ),
+    selector
   );
 };
 
 /**
- *
- * @param {string} chosenClient
- * @param {puppeteer.Page} page
+ * Gets the client the page is on already.
+ * @param {puppeteer.Page} page The page.
+ * @param {string} selector The selector.
+ * @returns {Promise<string>} The current active client.
  */
-const clientSelector = async (chosenClient, page) => {
-  const {
-    activeClient: activeClientSelector,
-    allClients: allClientsSelector,
-    activeChannel,
-    switchAccount,
-    buttons: { icon, changeAccount },
-    selectClient: _client,
-  } = selectors.client;
-  const _activeClient = await activeClient(page, activeClientSelector);
+const getActiveClient = async (page, selector) => {
+  await page.waitForSelector(selector);
+  return page.$eval(selector, (selectedClient) => selectedClient.innerText);
+};
 
-  await click(page, icon, 0);
-  await click(page, changeAccount, 0);
+/**
+ *
+ * @param {puppeteer.Page} page
+ * @param {string[]} clients
+ * @param {string} chosenClient
+ * @param {(clientId: number) => string} selector
+ */
+const chooseClient = async (page, clients, chosenClient, selector) => {
+  const clientId = clients.indexOf(chosenClient);
+  await page.$$eval(selector(clientId), (group) => group[0].click());
+};
 
-  if (_activeClient !== chosenClient) {
-    const clients = await allClients(page, allClientsSelector);
+const stayOnCurrentClient = async (page) => {
+  await click(page, clientSelectors.buttons.actionButtons('cancel'));
+};
 
-    if (clients.includes(chosenClient)) {
-      await selectClient(page, chosenClient, _client);
-      await click(page, switchAccount, 1);
-      await selectActiveChannel(page, activeChannel);
-    } else {
-      await click(page, switchAccount, 1);
-      await selectActiveChannel(page, activeChannel);
-    }
+const changeClient = async (page, client) => {
+  const { all, selectClient, switchAccount } = clientSelectors;
+  const clients = await getClients(page, all);
+
+  if (clients.includes(client)) {
+    await chooseClient(page, clients, client, selectClient);
+    await click(page, switchAccount);
   }
 };
 
-module.exports = clientSelector;
+/**
+ * Selects the client.
+ * @param {puppeteer.Page} page The page to perform the functions on.
+ * @param {string} client The client you want.
+ */
+const clickOnClient = async (page, client) => {
+  const {
+    active: activeClientSelector,
+    buttons: { icon, changeAccount },
+  } = clientSelectors;
+  let currentSelectedClient = '';
+
+  await click(page, icon);
+  await click(page, changeAccount);
+
+  currentSelectedClient = await getActiveClient(page, activeClientSelector);
+
+  currentSelectedClient === client
+    ? stayOnCurrentClient(page)
+    : changeClient(page, client);
+
+  await page.waitForTimeout(1000);
+};
+
+module.exports = clickOnClient;
