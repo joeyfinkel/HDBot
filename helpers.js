@@ -1,6 +1,14 @@
 const puppeteer = require('puppeteer');
 
 /**
+ * Creates an array of elements from `document.querySelectorAll()`.
+ * @param {string} selector The selector for the element to get.
+ * @returns Array of the specified selector.
+ */
+const getArrayOfElements = (selector) =>
+  Array.from(document.querySelectorAll(selector));
+
+/**
  *
  * @param {puppeteer.Page} page
  * @param {{email: string, password: string, loginBtn: string}} selectors
@@ -25,7 +33,6 @@ const click = async (page, selector) => {
     const { child, btnIdx } = _selector;
     const elements = Array.from(document.querySelectorAll(child));
 
-    console.log({ elements, length: elements.length });
     elements.map((element) => {
       elements.length === 1 ? element.click() : elements[btnIdx].click();
     });
@@ -33,4 +40,4 @@ const click = async (page, selector) => {
   await page.waitForTimeout(500);
 };
 
-module.exports = { login, click };
+module.exports = { login, click, getArrayOfElements };

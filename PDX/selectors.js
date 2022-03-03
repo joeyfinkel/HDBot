@@ -53,6 +53,26 @@ const channelSelectors = {
     parent: '.channels-list',
     child: '.channels-list > lp-dashboard-main-channel-list-item',
   },
+  listAllProducts: {
+    parent: '.side-actions-container',
+    child: '.side-actions-container > lp-channel-dashboard-sidebar-actions > a',
+    btnIdx: 0,
+  },
 };
 
-module.exports = { loginSelectors, clientSelectors, channelSelectors };
+const itemRefresherSelectors = {
+  items: {
+    parent: '.list-container',
+    child:
+      '.list-container > cdk-virtual-scroll-viewport > .cdk-virtual-scroll-content-wrapper > lp-product-list-view-item',
+  },
+  closeButton:
+    'mat-sidenav-content > lp-product-details-name-toolbar > mat-toolbar',
+};
+
+module.exports = {
+  loginSelectors,
+  clientSelectors,
+  channelSelectors,
+  itemRefresherSelectors,
+};

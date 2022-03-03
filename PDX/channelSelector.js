@@ -37,7 +37,6 @@ const getChannels = async (page) => {
 };
 
 const clickOnChannel = async (page, channel) => {
-  await page.waitForTimeout(3000);
   await page.waitForSelector(parent);
   await page.evaluate(
     (active, ch) => {

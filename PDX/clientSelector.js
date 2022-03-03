@@ -74,12 +74,9 @@ const clickOnClient = async (page, client) => {
   await click(page, changeAccount);
 
   currentSelectedClient = await getActiveClient(page, activeClientSelector);
-
   currentSelectedClient === client
     ? stayOnCurrentClient(page)
     : changeClient(page, client);
-
-  await page.waitForTimeout(1000);
 };
 
 module.exports = clickOnClient;
