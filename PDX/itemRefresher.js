@@ -9,23 +9,17 @@ const puppeteer = require('puppeteer');
  *
  * @param {puppeteer.Page} page
  */
-const showAllProducts = async (page) => {
-  await page.waitForSelector(listAllProducts.parent);
-  await page.evaluate(
-    /** @param {listAllProducts} selectors */
-    (selectors) => {
-      const sidebarButtons = Array.from(
-        document.querySelectorAll(selectors.child)
-      );
-
-      console.log(sidebarButtons);
-
-      sidebarButtons[0].textContent === 'List all products in channel'
-        ? sidebarButtons[0].click()
-        : sidebarButtons.length === 3 && sidebarButtons[0].click();
-    },
-    listAllProducts
-  );
+const showAllProducts = async (page, channel) => {
+  if (channel !== 'TheHomeDepot') {
+    await page.waitForSelector('lp-dashboard-category-list');
+    await page.$$eval(
+      listAllProducts.child,
+      (buttons) =>
+        buttons.length === 2 &&
+        buttons.map((button) => console.log(button.href))
+    );
+    await click(page, listAllProducts, 3000);
+  }
 };
 
 /**
@@ -34,86 +28,95 @@ const showAllProducts = async (page) => {
  * @returns
  */
 const getProducts = async (page) => {
-  await page.waitForSelector(itemRefresherSelectors.items.child);
-  return page.$$eval(itemRefresherSelectors.items.child, (products) =>
+  await page.waitForSelector(items);
+
+  return page.$$eval(items, (products) =>
     products.map((product) => product.firstChild)
   );
 };
 
-/**
- *
- * @param {puppeteer.Page} page
- */
-const refreshItem = async (page) => {
-  await page.waitForSelector(itemRefresherSelectors.items.child, {
-    visible: true,
-  });
-  await page.evaluate(
-    /** @param {itemRefresherSelectors} selectors */
-    (selectors) => {
-      const products = Array.from(
-        document.querySelectorAll(selectors.items.child)
-      );
+// /**
+//  *
+//  * @param {puppeteer.Page} page
+//  */
+// const refreshItem = async (page) => {
+//   await page.waitForSelector(items, {
+//     visible: true,
+//   });
+//   await page.evaluate(
+//     /** @param {items} item */
+//     async (item) => {
+//       const products = Array.from(document.querySelectorAll(item));
 
-      const toolbar = () => {
-        const productContentSection = document.querySelector(
-          'mat-sidenav-content'
-        );
+//       /**
+//        * Gets information about a product.
+//        * @returns {Promise<[{status: string, name: string, upc: string}]>} An array of objects for each product with information about that product.
+//        */
+//       const getItemData = () =>
+//         new Promise((resolve, reject) => {
+//           setTimeout(() => {
+//             const statuses = Array.from(
+//               document.querySelectorAll('.event-status')
+//             );
+//             const status =
+//               statuses[0].firstChild.firstChild.lastChild.textContent;
+//             const name = document.querySelector(
+//               '.product-name.ng-star-inserted'
+//             ).textContent;
+//             const upc = document.querySelector('.product-id').textContent;
 
-        return productContentSection.firstElementChild;
-      };
+//             resolve([{ status, name, upc: upc.replace('ID:', '') }]);
+//             reject([
+//               { status: 'Not found', name: 'Not found', upc: 'Not found' },
+//             ]);
+//           }, 2000);
+//         });
 
-      const getItemData = () => {
-        const settingCard = document.querySelectorAll(
-          'lp-settings-card.ng-star-inserted'
-        )[0];
-        // const matCard = settingCard.firstElementChild;
-        // const matCardContent = matCard.children[1].firstElementChild;
-        // const timeline = matCardContent.firstElementChild.firstElementChild;
-        // const history = timeline.lastElementChild.firstElementChild;
-        // const eventStatus = history.firstElementChild;
-        // const status =
-        //   eventStatus.firstElementChild.firstElementChild.lastElementChild;
-        // const title = toolbar().childNodes[3].textContent;
-        // const upc = toolbar().childNodes[6].textContent;
+//       const closeView = () => {
+//         const closeButton = document.querySelector('button.close-button');
+//         closeButton && closeButton.click();
+//       };
 
-        // return [{ upc, title, status: status.textContent }];
-        console.log(settingCard);
-      };
+//       products[0].children[0].click();
+//       const data = await getItemData();
+//       console.log(data);
+//       closeView();
+//     },
+//     items
+//   );
+// };
 
-      const closeView = () => {
-        const closeButton = document.querySelector('button.close-button');
-        closeButton && closeButton.click();
-      };
+const refreshItem = async (items) => {
+  const products = Array.from(document.querySelectorAll(items));
+  console.log('Item refresher');
+  /**
+   * Gets information about a product.
+   * @returns {Promise<[{status: string, name: string, upc: string}]>} An array of objects for each product with information about that product.
+   */
+  const getItemData = () =>
+    new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const statuses = Array.from(document.querySelectorAll('.event-status'));
+        const status = statuses[0].firstChild.firstChild.lastChild.textContent;
+        const name = document.querySelector(
+          '.product-name.ng-star-inserted'
+        ).textContent;
+        const upc = document.querySelector('.product-id').textContent;
 
-      products[0].children[0].click();
-      getItemData();
-      closeView();
+        resolve([{ status, name, upc: upc.replace('ID:', '') }]);
+        reject([{ status: 'Not found', name: 'Not found', upc: 'Not found' }]);
+      }, 2000);
+    });
 
-      // for (const product of products) {
-      //   product.firstElementChild.click();
-      //   console.log(getItemData());
-      //   setTimeout(closeView, 5000);
-      // }
+  const closeView = () => {
+    const closeButton = document.querySelector('button.close-button');
+    closeButton && closeButton.click();
+  };
 
-      // products.forEach((product) => {
-      //   product.firstElementChild.click();
-      //   // console.log([{ name: getItemName() }]);
-      //   setTimeout(closeView, 5000);
-      // });
-    },
-    itemRefresherSelectors
-  );
+  products[0].children[0].click();
+  const data = await getItemData();
+  console.log(data);
+  closeView();
 };
 
-/**
- *
- * @param {puppeteer.Page} page
- */
-const itemRefresher = async (page) => {
-  console.log('working');
-  await showAllProducts(page);
-  await refreshItem(page);
-};
-
-module.exports = { itemRefresher, showAllProducts, refreshItem };
+module.exports = { showAllProducts, refreshItem };

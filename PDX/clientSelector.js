@@ -1,7 +1,6 @@
 const puppeteer = require('puppeteer');
 const { clientSelectors } = require('./selectors');
 const { click } = require('../helpers');
-const { getChannels, clickOnChannel } = require('./channelSelector');
 
 /**
  *
@@ -69,14 +68,22 @@ const clickOnClient = async (page, client) => {
     buttons: { icon, changeAccount },
   } = clientSelectors;
   let currentSelectedClient = '';
+  setTimeout(async () => {
+    await page.$eval(
+      '.company',
+      (company, _client) => {
+        if (company.textContent === _client) console.log('no change required');
+      },
+      client
+    );
+  }, 5000);
+  // await click(page, icon, { wait: true, delay: 3000 });
+  // await click(page, changeAccount, { wait: true });
 
-  await click(page, icon);
-  await click(page, changeAccount);
-
-  currentSelectedClient = await getActiveClient(page, activeClientSelector);
-  currentSelectedClient === client
-    ? stayOnCurrentClient(page)
-    : changeClient(page, client);
+  // currentSelectedClient = await getActiveClient(page, activeClientSelector);
+  // currentSelectedClient === client
+  //   ? stayOnCurrentClient(page)
+  //   : changeClient(page, client);
 };
 
-module.exports = clickOnClient;
+module.exports = { clickOnClient };
