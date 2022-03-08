@@ -8,7 +8,7 @@ const events = async () => {
     // devtools: true,
     headless: false,
     slowMo: 20,
-    defaultViewport: { width: 1530, height: 830 },
+    defaultViewport: null,
     args: ['--start-maximized'],
   };
   const browser = await puppeteer.launch(launchOptions);

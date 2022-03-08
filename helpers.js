@@ -1,14 +1,6 @@
 const puppeteer = require('puppeteer');
 
 /**
- * Creates an array of elements from `document.querySelectorAll()`.
- * @param {string} selector The selector for the element to get.
- * @returns Array of the specified selector.
- */
-const getArrayOfElements = (selector) =>
-  Array.from(document.querySelectorAll(selector));
-
-/**
  * Logs into a page.
  * @param {puppeteer.Page} page
  * @param {string} loginLink The link of the page to log into.
@@ -16,7 +8,7 @@ const getArrayOfElements = (selector) =>
  * @param {{email: string, password: string}} credentials
  */
 const login = async (page, loginLink, selectors, credentials) => {
-  await page.goto(loginLink);
+  await page.goto(loginLink, { waitUntil: 'networkidle2' });
   await page.type(selectors.email, credentials.email);
   await page.click(selectors.loginBtn);
   await page.waitForSelector(selectors.password);
@@ -38,23 +30,21 @@ const click = async (
   const { delay } = options;
   await page.waitForSelector(selector.parent);
   await page.waitForTimeout(delay);
-  await page.evaluate((_selector) => {
-    const { child, btnIdx } = _selector;
-    const elements = Array.from(document.querySelectorAll(child));
+  await page.evaluate(
+    /**
+     * @param {selector} _selector The HTML selectors
+     */
+    (_selector) => {
+      const { child, btnIdx } = _selector;
+      const elements = Array.from(document.querySelectorAll(child));
 
-    elements.map((element) => {
-      elements.length === 1 ? element.click() : elements[btnIdx].click();
-    });
-  }, selector);
+      elements.map((element) => {
+        elements.length === 1 ? element.click() : elements[btnIdx].click();
+      });
+    },
+    selector
+  );
   await page.waitForTimeout(delay / 2);
 };
 
-/**
- * @param {Location} location
- * @param {string} link
- */
-const changeURL = () => {
-  location.href = link;
-};
-
-module.exports = { login, click, getArrayOfElements, changeURL };
+module.exports = { login, click };
